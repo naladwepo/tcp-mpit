@@ -5,7 +5,7 @@ FastAPI приложение для RAG-поиска комплектующих
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uvicorn
@@ -14,6 +14,7 @@ from pathlib import Path
 from src.data_loader import DataLoader
 from src.search_engine import VectorSearchEngine
 from src.hybrid_processor import HybridQueryProcessor
+from src.document_generator import DocumentGenerator
 
 # Инициализация FastAPI
 app = FastAPI(
@@ -40,29 +41,45 @@ app.add_middleware(
 search_engine: Optional[VectorSearchEngine] = None
 processor: Optional[HybridQueryProcessor] = None
 products_loaded: bool = False
+document_generator: Optional[DocumentGenerator] = None
 
 
 # Pydantic модели
 class SearchRequest(BaseModel):
     """Запрос на поиск"""
-    query: str = Field(..., description="Поисковый запрос", example="Гайка М6")
-    top_k: int = Field(10, description="Количество результатов", ge=1, le=50)
-    use_decomposition: bool = Field(True, description="Использовать декомпозицию для сложных запросов")
-    complexity: Optional[str] = Field(None, description="Сложность запроса (simple/medium/complex)")
+    query: str = Field(..., description="Поисковый запрос", example="Комплект: короб 200x200, крышка, 4 винта М6")
+    use_llm: bool = Field(True, description="Использовать LLM для парсинга запроса")
 
 
-class FoundItem(BaseModel):
-    """Найденный товар"""
+class ProductInfo(BaseModel):
+    """Информация о найденном товаре"""
+    id: int
     name: str
-    cost: str
+    cost: float
+    category: str
+
+
+class SearchResultItem(BaseModel):
+    """Элемент результата поиска"""
+    requested_item: str
+    quantity: int
+    found_product: Optional[ProductInfo]
+    relevance_score: float
+    unit_price: float
+    total_price: float
+    specifications: str
+    alternatives: List[Dict[str, Any]] = []
 
 
 class SearchResponse(BaseModel):
     """Ответ на поиск"""
-    found_items: List[FoundItem]
-    items_count: int
-    total_cost: str
-    query: str
+    query_id: Optional[int]
+    original_query: str
+    items: List[SearchResultItem]
+    total_items: int
+    found_items: int
+    total_cost: float
+    currency: str
 
 
 class HealthResponse(BaseModel):
@@ -83,7 +100,7 @@ class ErrorResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Инициализация при старте приложения"""
-    global search_engine, processor, products_loaded
+    global search_engine, processor, products_loaded, document_generator
     
     print("=" * 70)
     print("🚀 Запуск RAG API...")
@@ -114,12 +131,17 @@ async def startup_event():
         else:
             print("✓ Индекс загружен из кэша")
         
-        # Создаем гибридный процессор с LLM
-        print("🤖 Инициализация гибридного процессора...")
+        # Создаем гибридный процессор с новой архитектурой
+        print("🤖 Инициализация гибридного процессора (новая архитектура)...")
         processor = HybridQueryProcessor(
             search_engine=search_engine,
-            use_llm=True
+            use_llm_parser=True,  # LLM парсер на входе с автоопределением CUDA/MPS/CPU
+            use_fallback_enhancement=True
         )
+        
+        # Инициализируем генератор документов
+        print("📄 Инициализация генератора документов...")
+        document_generator = DocumentGenerator(output_dir="generated_documents")
         
         products_loaded = True
         print("=" * 70)
@@ -127,6 +149,7 @@ async def startup_event():
         print(f"📊 Модель эмбеддингов: {embedding_model}")
         print(f"🗂️  Индекс: {index_dir}")
         print(f"📦 Товаров в базе: {len(products_df)}")
+        print(f"📄 Документы: generated_documents/")
         print("=" * 70)
         
     except Exception as e:
@@ -171,7 +194,7 @@ async def api_info():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Проверка здоровья системы"""
-    llm_available = processor and processor.preprocessor and processor.preprocessor.model is not None
+    llm_available = processor and hasattr(processor, 'request_parser') and processor.request_parser is not None
     
     return HealthResponse(
         status="healthy" if products_loaded else "unhealthy",
@@ -185,13 +208,18 @@ async def health_check():
 @app.post("/search", response_model=SearchResponse)
 async def search(request: SearchRequest):
     """
-    Поиск комплектующих по запросу
+    Поиск комплектующих по запросу (новая архитектура)
+    
+    Pipeline:
+    1. LLM парсит запрос → список товаров + количество + top_k (динамически)
+    2. Поиск каждого товара в векторной БД (с индивидуальным top_k)
+    3. Расчет стоимости и формирование ответа
     
     Args:
-        request: Запрос на поиск
+        request: Запрос на поиск (без top_k - определяется LLM автоматически)
         
     Returns:
-        SearchResponse: Результаты поиска с товарами и стоимостью
+        SearchResponse: Результаты поиска с товарами, количеством и стоимостью
     """
     if not products_loaded or not processor:
         raise HTTPException(
@@ -200,28 +228,45 @@ async def search(request: SearchRequest):
         )
     
     try:
-        # Выполняем поиск через гибридный процессор
+        # Выполняем поиск через новую архитектуру (top_k определяется LLM)
         result = processor.process_query(
-            query=request.query,
-            top_k=request.top_k,
-            use_decomposition=request.use_decomposition,
-            complexity=request.complexity
-        )
-        
-        # Формируем ответ
-        response_data = result.get('response', {})
-        
-        return SearchResponse(
-            found_items=[
-                FoundItem(name=item['name'], cost=item['cost'])
-                for item in response_data.get('found_items', [])
-            ],
-            items_count=response_data.get('items_count', 0),
-            total_cost=response_data.get('total_cost', '0 руб.'),
             query=request.query
         )
         
+        # Формируем ответ в новом формате
+        items_response = []
+        for item in result.get('items', []):
+            found_product = item.get('found_product')
+            
+            items_response.append(SearchResultItem(
+                requested_item=item.get('requested_item', ''),
+                quantity=item.get('quantity', 1),
+                found_product=ProductInfo(
+                    id=found_product.get('id', 0),
+                    name=found_product.get('name', ''),
+                    cost=found_product.get('cost', 0.0),
+                    category=found_product.get('category', '')
+                ) if found_product else None,
+                relevance_score=item.get('relevance_score', 0.0),
+                unit_price=item.get('unit_price', 0.0),
+                total_price=item.get('total_price', 0.0),
+                specifications=item.get('specifications', ''),
+                alternatives=item.get('alternatives', [])
+            ))
+        
+        return SearchResponse(
+            query_id=result.get('query_id'),
+            original_query=result.get('original_query', request.query),
+            items=items_response,
+            total_items=result.get('total_items', 0),
+            found_items=result.get('found_items', 0),
+            total_cost=result.get('total_cost', 0.0),
+            currency=result.get('currency', 'RUB')
+        )
+        
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Ошибка при выполнении поиска: {str(e)}"
@@ -230,25 +275,22 @@ async def search(request: SearchRequest):
 
 @app.get("/search", response_model=SearchResponse)
 async def search_get(
-    q: str = Query(..., description="Поисковый запрос", example="Гайка М6"),
-    top_k: int = Query(10, description="Количество результатов", ge=1, le=50),
-    decompose: bool = Query(True, description="Использовать декомпозицию")
+    q: str = Query(..., description="Поисковый запрос", example="Комплект: короб 200x200, крышка, винты"),
+    use_llm: bool = Query(True, description="Использовать LLM парсер")
 ):
     """
     GET эндпоинт для поиска (для удобного тестирования)
     
     Args:
         q: Поисковый запрос
-        top_k: Количество результатов
-        decompose: Использовать ли декомпозицию
+        use_llm: Использовать ли LLM парсер (top_k определяется автоматически)
         
     Returns:
         SearchResponse: Результаты поиска
     """
     request = SearchRequest(
         query=q,
-        top_k=top_k,
-        use_decomposition=decompose
+        use_llm=use_llm
     )
     return await search(request)
 
@@ -283,6 +325,170 @@ async def get_categories():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/generate/word")
+async def generate_word_document(request: SearchRequest):
+    """
+    Генерирует Технико-Коммерческое Предложение в формате Word (.docx)
+    
+    Args:
+        request: Запрос на поиск (такой же как для /search)
+        
+    Returns:
+        FileResponse: Word документ
+    """
+    if not products_loaded or not processor or not document_generator:
+        raise HTTPException(
+            status_code=503,
+            detail="Система не инициализирована. Попробуйте позже."
+        )
+    
+    try:
+        # Выполняем поиск
+        result = processor.process_query(query=request.query)
+        
+        # Генерируем документ
+        filepath = document_generator.generate_word(result)
+        
+        return FileResponse(
+            path=str(filepath),
+            filename=filepath.name,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при генерации документа: {str(e)}"
+        )
+
+
+@app.post("/generate/pdf")
+async def generate_pdf_document(request: SearchRequest):
+    """
+    Генерирует Технико-Коммерческое Предложение в формате PDF
+    
+    Args:
+        request: Запрос на поиск (такой же как для /search)
+        
+    Returns:
+        FileResponse: PDF документ
+    """
+    if not products_loaded or not processor or not document_generator:
+        raise HTTPException(
+            status_code=503,
+            detail="Система не инициализирована. Попробуйте позже."
+        )
+    
+    try:
+        # Выполняем поиск
+        result = processor.process_query(query=request.query)
+        
+        # Генерируем документ
+        filepath = document_generator.generate_pdf(result)
+        
+        # Определяем media type
+        if filepath.suffix == '.pdf':
+            media_type = "application/pdf"
+        else:
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        
+        return FileResponse(
+            path=str(filepath),
+            filename=filepath.name,
+            media_type=media_type
+        )
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при генерации документа: {str(e)}"
+        )
+
+
+@app.post("/generate/both")
+async def generate_both_documents(request: SearchRequest):
+    """
+    Генерирует Технико-Коммерческое Предложение в обоих форматах (Word и PDF)
+    
+    Args:
+        request: Запрос на поиск (такой же как для /search)
+        
+    Returns:
+        Dict: Информация о созданных документах
+    """
+    if not products_loaded or not processor or not document_generator:
+        raise HTTPException(
+            status_code=503,
+            detail="Система не инициализирована. Попробуйте позже."
+        )
+    
+    try:
+        # Выполняем поиск
+        result = processor.process_query(query=request.query)
+        
+        # Генерируем документы
+        files = document_generator.generate_both(result)
+        
+        return {
+            "message": "Документы успешно созданы",
+            "files": {
+                "word": {
+                    "filename": files['word'].name,
+                    "path": str(files['word']),
+                    "download_url": f"/download/{files['word'].name}"
+                },
+                "pdf": {
+                    "filename": files['pdf'].name,
+                    "path": str(files['pdf']),
+                    "download_url": f"/download/{files['pdf'].name}"
+                }
+            }
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при генерации документов: {str(e)}"
+        )
+
+
+@app.get("/download/{filename}")
+async def download_document(filename: str):
+    """
+    Скачать созданный документ
+    
+    Args:
+        filename: Имя файла для скачивания
+        
+    Returns:
+        FileResponse: Файл документа
+    """
+    filepath = Path("generated_documents") / filename
+    
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Файл не найден")
+    
+    # Определяем media type по расширению
+    if filepath.suffix == '.pdf':
+        media_type = "application/pdf"
+    elif filepath.suffix == '.docx':
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    else:
+        media_type = "application/octet-stream"
+    
+    return FileResponse(
+        path=str(filepath),
+        filename=filename,
+        media_type=media_type
+    )
 
 
 if __name__ == "__main__":

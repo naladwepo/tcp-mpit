@@ -1,0 +1,379 @@
+[
+  {
+    "filename": "query_1_simple.json",
+    "query_id": 1,
+    "complexity": "simple",
+    "query": "Крышка 200 мм",
+    "execution_time": 20.205583095550537,
+    "expected_count": 1,
+    "actual_count": 1,
+    "total_cost": 23299.0,
+    "success": true,
+    "result": {
+      "query_id": null,
+      "original_query": "Крышка 200 мм",
+      "items": [
+        {
+          "requested_item": "Крышка для короба/лотка",
+          "quantity": 1,
+          "found_product": {
+            "id": 33,
+            "name": "Крышка лотка перфорированного, ширина 600 мм, длинна 3 м, горячее цинкование не менее 70 мкм 35528HDZ",
+            "cost": 23299.0,
+            "category": "Крышка лотка перфорированного"
+          },
+          "relevance_score": 0.8704921007156372,
+          "unit_price": 23299.0,
+          "total_price": 23299.0,
+          "specifications": "размер 200 мм",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Крышка лотка перфорированного, оцинкованная методом горячего цинкования, толщина покрытия не менее 70 мкм, ширина 200 мм, (L=3000 мм)",
+                "cost": 40504.0,
+                "category": "Крышка лотка перфорированного",
+                "id": 20
+              },
+              "score": 0.8634088039398193
+            },
+            {
+              "product": {
+                "name": "Крышка горизонтального углового лотка 90°, 800мм, горячее цинкование, толщина покрытия не менее 80 мкм",
+                "cost": 16795.0,
+                "category": "Крышка горизонтального углового лотка",
+                "id": 8
+              },
+              "score": 0.861966609954834
+            }
+          ]
+        }
+      ],
+      "total_items": 1,
+      "found_items": 1,
+      "total_cost": 23299.0,
+      "currency": "RUB"
+    }
+  },
+  {
+    "filename": "query_2_simple.json",
+    "query_id": 2,
+    "complexity": "simple",
+    "query": "Гайка М6",
+    "execution_time": 12.718379020690918,
+    "expected_count": 3,
+    "actual_count": 1,
+    "total_cost": 54752.0,
+    "success": true,
+    "result": {
+      "query_id": null,
+      "original_query": "Гайка М6",
+      "items": [
+        {
+          "requested_item": "Гайка М6",
+          "quantity": 4,
+          "found_product": {
+            "id": 4,
+            "name": "Гайка М6,оцинкованная",
+            "cost": 13688.0,
+            "category": "Гайка"
+          },
+          "relevance_score": 0.924715518951416,
+          "unit_price": 13688.0,
+          "total_price": 54752.0,
+          "specifications": "Резьба М6, материал - сталь, класс точности - 8.8",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Гайка шестигранная нормальная оцинкованная М8-6",
+                "cost": 38157.0,
+                "category": "Гайка шестигранная нормальная оцинкованная",
+                "id": 39
+              },
+              "score": 0.9048418998718262
+            },
+            {
+              "product": {
+                "name": "Гайка с насечкой препятствующей откручиванию, М6 DKC арт. СМ100600",
+                "cost": 38194.0,
+                "category": "Гайка с насечкой препятствующей откручиванию",
+                "id": 2
+              },
+              "score": 0.8835520148277283
+            }
+          ]
+        }
+      ],
+      "total_items": 1,
+      "found_items": 1,
+      "total_cost": 54752.0,
+      "currency": "RUB"
+    }
+  },
+  {
+    "filename": "query_4_medium.json",
+    "query_id": 4,
+    "complexity": "medium",
+    "query": "Короб 100x100 мм любой длины",
+    "execution_time": 17.512577772140503,
+    "expected_count": 1,
+    "actual_count": 1,
+    "total_cost": 61263.0,
+    "success": true,
+    "result": {
+      "query_id": null,
+      "original_query": "Короб 100x100 мм любой длины",
+      "items": [
+        {
+          "requested_item": "Короб монтажный 100x100 мм",
+          "quantity": 1,
+          "found_product": {
+            "id": 0,
+            "name": "Короб 100x100 мм, L=3000 мм, горячее цинкование, толщина покрытия не менее 80 мкм DKC арт. 35101",
+            "cost": 61263.0,
+            "category": "Короб"
+          },
+          "relevance_score": 0.9129114151000977,
+          "unit_price": 61263.0,
+          "total_price": 61263.0,
+          "specifications": "размер сечения 100x100 мм, длина любая, материал - оцинкованная сталь",
+          "alternatives": [
+            {
+              "product": {
+                "name": "ширина 100 мм",
+                "cost": 100.0,
+                "category": "ширина",
+                "id": 72
+              },
+              "score": 0.8990167379379272
+            },
+            {
+              "product": {
+                "name": "Короб 200x200 мм, L=2000 мм, горячее цинкование, толщина покрытия не менее 80 мкм UNM322",
+                "cost": 88498.0,
+                "category": "Короб",
+                "id": 3
+              },
+              "score": 0.8811031579971313
+            }
+          ]
+        }
+      ],
+      "total_items": 1,
+      "found_items": 1,
+      "total_cost": 61263.0,
+      "currency": "RUB"
+    }
+  },
+  {
+    "filename": "query_5_medium.json",
+    "query_id": 5,
+    "complexity": "medium",
+    "query": "Крышка углового лотка 800мм",
+    "execution_time": 44.95911979675293,
+    "expected_count": 3,
+    "actual_count": 1,
+    "total_cost": 16795.0,
+    "success": true,
+    "result": {
+      "query_id": null,
+      "original_query": "Крышка углового лотка 800мм",
+      "items": [
+        {
+          "requested_item": "Крышка углового лотка",
+          "quantity": 1,
+          "found_product": {
+            "id": 8,
+            "name": "Крышка горизонтального углового лотка 90°, 800мм, горячее цинкование, толщина покрытия не менее 80 мкм",
+            "cost": 16795.0,
+            "category": "Крышка горизонтального углового лотка"
+          },
+          "relevance_score": 0.8975098133087158,
+          "unit_price": 16795.0,
+          "total_price": 16795.0,
+          "specifications": "размер 800 мм, монтажная резьба M6, материал оцинкованная сталь",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Крышка вертикального внешнего углового лотка 90°, 800мм, горячее цинкование, толщина покрытия не менее 80 мкм",
+                "cost": 1860.0,
+                "category": "Крышка вертикального внешнего углового лотка",
+                "id": 1
+              },
+              "score": 0.8952357172966003
+            },
+            {
+              "product": {
+                "name": "Крышка вертикального внутреннего углового лотка 90°, 800мм, горячее цинкование, толщина покрытия не менее 80 мкм",
+                "cost": 77820.0,
+                "category": "Крышка вертикального внутреннего углового лотка",
+                "id": 11
+              },
+              "score": 0.8937889337539673
+            }
+          ]
+        }
+      ],
+      "total_items": 1,
+      "found_items": 1,
+      "total_cost": 16795.0,
+      "currency": "RUB"
+    }
+  },
+  {
+    "filename": "query_8_complex.json",
+    "query_id": 8,
+    "complexity": "complex",
+    "query": "Комплект для монтажа короба 200x200: короб, крышка, винты и гайки",
+    "execution_time": 33.12208104133606,
+    "expected_count": 6,
+    "actual_count": 4,
+    "total_cost": 415545.0,
+    "success": true,
+    "result": {
+      "query_id": null,
+      "original_query": "Комплект для монтажа короба 200x200: короб, крышка, винты и гайки",
+      "items": [
+        {
+          "requested_item": "Короб 200x200",
+          "quantity": 1,
+          "found_product": {
+            "id": 3,
+            "name": "Короб 200x200 мм, L=2000 мм, горячее цинкование, толщина покрытия не менее 80 мкм UNM322",
+            "cost": 88498.0,
+            "category": "Короб"
+          },
+          "relevance_score": 0.9172492027282715,
+          "unit_price": 88498.0,
+          "total_price": 88498.0,
+          "specifications": "размер 200x200 мм",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Короб 100x100 мм, L=3000 мм, горячее цинкование, толщина покрытия не менее 80 мкм DKC арт. 35101",
+                "cost": 61263.0,
+                "category": "Короб",
+                "id": 0
+              },
+              "score": 0.874603807926178
+            },
+            {
+              "product": {
+                "name": "Крышка 200 мм, L=2000 мм, горячее цинкование, толщина покрытия не менее 80 мкм UNM322",
+                "cost": 45131.0,
+                "category": "Крышка",
+                "id": 6
+              },
+              "score": 0.8701195120811462
+            }
+          ]
+        },
+        {
+          "requested_item": "Крышка для короба 200x200",
+          "quantity": 1,
+          "found_product": {
+            "id": 6,
+            "name": "Крышка 200 мм, L=2000 мм, горячее цинкование, толщина покрытия не менее 80 мкм UNM322",
+            "cost": 45131.0,
+            "category": "Крышка"
+          },
+          "relevance_score": 0.9072126150131226,
+          "unit_price": 45131.0,
+          "total_price": 45131.0,
+          "specifications": "размер 200x200 мм",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Короб 200x200 мм, L=2000 мм, горячее цинкование, толщина покрытия не менее 80 мкм UNM322",
+                "cost": 88498.0,
+                "category": "Короб",
+                "id": 3
+              },
+              "score": 0.8972195982933044
+            },
+            {
+              "product": {
+                "name": "Крышка лотка перфорированного, оцинкованная методом горячего цинкования, толщина покрытия не менее 70 мкм, ширина 200 мм, (L=3000 мм)",
+                "cost": 40504.0,
+                "category": "Крышка лотка перфорированного",
+                "id": 20
+              },
+              "score": 0.8639182448387146
+            }
+          ]
+        },
+        {
+          "requested_item": "Винты для монтажа",
+          "quantity": 4,
+          "found_product": {
+            "id": 81,
+            "name": "с комплектом метизов",
+            "cost": 0.0,
+            "category": "с"
+          },
+          "relevance_score": 0.8520036935806274,
+          "unit_price": 0.0,
+          "total_price": 0.0,
+          "specifications": "резьба M6, длина 25 мм, материал сталь",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Винт с крестообразным шлицем М6х10 DKC арт. СМ010610 или аналог",
+                "cost": 12534.0,
+                "category": "Винт с крестообразным шлицем",
+                "id": 5
+              },
+              "score": 0.8515944480895996
+            },
+            {
+              "product": {
+                "name": "с комплектом метизов, препятствующих откручиванию, HILTI",
+                "cost": 69148.0,
+                "category": "с",
+                "id": 57
+              },
+              "score": 0.8482515215873718
+            }
+          ]
+        },
+        {
+          "requested_item": "Гайки для монтажа",
+          "quantity": 4,
+          "found_product": {
+            "id": 10,
+            "name": "Монтажная гайка MT-TL M10 HILTI арт. 2272080",
+            "cost": 70479.0,
+            "category": "Монтажная гайка"
+          },
+          "relevance_score": 0.8797239065170288,
+          "unit_price": 70479.0,
+          "total_price": 281916.0,
+          "specifications": "резьба M6, материал сталь",
+          "alternatives": [
+            {
+              "product": {
+                "name": "Гайка М6,оцинкованная",
+                "cost": 13688.0,
+                "category": "Гайка",
+                "id": 4
+              },
+              "score": 0.8632960319519043
+            },
+            {
+              "product": {
+                "name": "Гайка с насечкой препятствующей откручиванию, М6 DKC арт. СМ100600 или аналог",
+                "cost": 95663.0,
+                "category": "Гайка с насечкой препятствующей откручиванию",
+                "id": 9
+              },
+              "score": 0.8611245155334473
+            }
+          ]
+        }
+      ],
+      "total_items": 4,
+      "found_items": 4,
+      "total_cost": 415545.0,
+      "currency": "RUB"
+    }
+  }
+]

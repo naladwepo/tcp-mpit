@@ -174,6 +174,10 @@ class DataLoader:
         # Убираем пустые названия
         combined = combined[combined['name'].str.len() > 0]
         
+        # Переименовываем 'price' в 'cost' для совместимости с LLMValidator
+        if 'price' in combined.columns:
+            combined = combined.rename(columns={'price': 'cost'})
+        
         self.products_df = combined
         return combined
     

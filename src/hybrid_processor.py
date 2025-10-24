@@ -2,122 +2,179 @@
 Гибридный процессор запросов с декомпозицией для сложных запросов
 """
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from src.llm_preprocessor import LLMQueryPreprocessor
+from src.llm_request_parser import LLMRequestParser
+from src.query_enhancement import QueryEnhancer
+from src.llm_validator import LLMValidator, IterativeSearchValidator
 from src.search_engine import VectorSearchEngine
 from src.cost_calculator import create_response_json
 
 
 class HybridQueryProcessor:
     """
-    Процессор запросов с автоматической декомпозицией сложных запросов
+    Процессор запросов с LLM парсером на входе
+    
+    Новая архитектура:
+    1. LLM парсит запрос → список товаров + количество
+    2. Векторный поиск для каждого товара
+    3. Формирование ответа с ценами
     """
     
     def __init__(
         self, 
         search_engine: VectorSearchEngine,
-        use_llm: bool = True,
-        llm_model_path: str = "./Qwen/Qwen3-4B-Instruct-2507"
+        use_llm_parser: bool = True,
+        llm_model_path: str = "./Qwen/Qwen3-4B-Instruct-2507",
+        use_fallback_enhancement: bool = True
     ):
         """
         Args:
             search_engine: экземпляр векторного поиска
-            use_llm: использовать ли LLM для препроцессинга
+            use_llm_parser: использовать ли LLM для парсинга запроса на входе
             llm_model_path: путь к LLM модели
+            use_fallback_enhancement: использовать ли QueryEnhancer как fallback
         """
         self.search_engine = search_engine
-        self.use_llm_flag = use_llm
+        self.use_llm_parser = use_llm_parser
         
-        # Всегда создаем препроцессор (он имеет fallback)
-        self.preprocessor = LLMQueryPreprocessor(
-            model_path=llm_model_path,
-            use_llm=use_llm
-        )
+        # LLM парсер запросов (главный компонент на входе)
+        if use_llm_parser:
+            self.request_parser = LLMRequestParser(
+                model_path=llm_model_path,
+                device=None  # Автоопределение: CUDA > MPS > CPU
+            )
+            print("✓ LLM Request Parser активирован")
+        else:
+            self.request_parser = None
+        
+        # Query enhancer как fallback
+        if use_fallback_enhancement:
+            self.query_enhancer = QueryEnhancer()
+            print("✓ Query Enhancer (fallback) активирован")
+        else:
+            self.query_enhancer = None
     
     def process_query(
         self, 
         query: str, 
-        top_k: int = 10,
-        complexity: str = None,
-        query_id: int = None,
-        use_decomposition: bool = True
+        query_id: int = None
     ) -> Dict:
         """
-        Обрабатывает запрос с автоматической декомпозицией
+        Обрабатывает запрос с новой архитектурой
+        
+        Pipeline:
+        1. LLM парсит запрос → список товаров + количество + top_k
+        2. Поиск каждого товара в векторной БД (с индивидуальным top_k)
+        3. Расчет стоимости и формирование ответа
         
         Args:
             query: поисковый запрос
-            top_k: количество результатов
-            complexity: сложность запроса (простой/средний/сложный)
             query_id: ID запроса
-            use_decomposition: использовать ли декомпозицию для сложных запросов
             
         Returns:
-            Dict: JSON ответ
+            Dict: JSON ответ с товарами, количеством и ценами
         """
-        # Проверяем нужна ли декомпозиция
-        if not use_decomposition or not self.preprocessor:
-            # Простой поиск без декомпозиции
-            results = self.search_engine.search(query, top_k=top_k)
-            found_items = [product for product, score in results]
-        else:
-            # Используем препроцессор для разбиения запроса
-            components = self.preprocessor.decompose_query(query)
-            
-            if len(components) == 1:
-                # Простой запрос - ищем как обычно
-                results = self.search_engine.search(query, top_k=top_k)
-                found_items = [product for product, score in results]
-            else:
-                # Сложный запрос - ищем по компонентам
-                print(f"Найдено компонентов: {len(components)}")
-                for i, comp in enumerate(components, 1):
-                    print(f"  {i}. {comp}")
-                # По 2 товара на компонент для сбалансированного результата
-                found_items = self._search_by_components(components, items_per_component=2)
-                # Ограничиваем общее количество (для сложных запросов берем по 1.5x на компонент)
-                max_items = min(top_k, len(components) * 2)
-                found_items = found_items[:max_items]
+        print(f"\n{'='*70}")
+        print(f"📋 ОБРАБОТКА ЗАПРОСА")
+        print(f"{'='*70}")
+        print(f"Запрос: {query}")
+        print(f"{'='*70}")
         
-        # Создаем ответ
-        response = create_response_json(
-            found_items=found_items,
-            query_id=query_id,
-            complexity=complexity
-        )
+        # === ШАГ 1: LLM ПАРСИНГ ЗАПРОСА ===
+        if self.use_llm_parser and self.request_parser:
+            print("\n🤖 Шаг 1: LLM анализирует запрос...")
+            parsed_request = self.request_parser.parse_request(query)
+            print(self.request_parser.format_result(parsed_request))
+            items_to_search = parsed_request.get('items', [])
+        else:
+            # Fallback на Query Enhancer
+            print("\n🔍 Шаг 1: Эвристический анализ запроса...")
+            if self.query_enhancer:
+                enhanced = self.query_enhancer.enhance_query(query)
+                items_to_search = [
+                    {"name": item, "quantity": 1, "specifications": "", "top_k": 3}
+                    for item in enhanced
+                ]
+            else:
+                items_to_search = [{"name": query, "quantity": 1, "specifications": "", "top_k": 3}]
+        
+        # === ШАГ 2: ПОИСК КАЖДОГО ТОВАРА ===
+        print(f"\n🔍 Шаг 2: Поиск товаров ({len(items_to_search)} позиций)...")
+        print("-" * 70)
+        
+        all_results = []
+        total_cost = 0
+        
+        for i, item_spec in enumerate(items_to_search, 1):
+            item_name = item_spec.get('name', '')
+            quantity = item_spec.get('quantity', 1)
+            specs = item_spec.get('specifications', '')
+            top_k = item_spec.get('top_k', 3)  # Динамический top_k от LLM
+            
+            print(f"\n{i}. Поиск: {item_name}")
+            print(f"   Количество: {quantity} шт.")
+            print(f"   Поиск альтернатив: {top_k}")
+            
+            # Поиск в векторной БД с индивидуальным top_k
+            search_results = self.search_engine.search(item_name, top_k=top_k)
+            
+            if search_results:
+                # Берем лучший результат
+                best_product, best_score = search_results[0]
+                
+                unit_price = best_product.get('cost', 0)
+                item_total = unit_price * quantity
+                total_cost += item_total
+                
+                print(f"   ✓ Найдено: {best_product.get('name', 'N/A')[:60]}")
+                print(f"   💰 Цена: {unit_price:,.0f} руб. × {quantity} = {item_total:,.0f} руб.")
+                print(f"   📊 Релевантность: {best_score:.4f}")
+                
+                all_results.append({
+                    "requested_item": item_name,
+                    "quantity": quantity,
+                    "found_product": best_product,
+                    "relevance_score": float(best_score),
+                    "unit_price": unit_price,
+                    "total_price": item_total,
+                    "specifications": specs,
+                    "alternatives": [
+                        {
+                            "product": prod,
+                            "score": float(score)
+                        }
+                        for prod, score in search_results[1:min(3, len(search_results))]
+                    ]
+                })
+            else:
+                print(f"   ❌ Товар не найден")
+                all_results.append({
+                    "requested_item": item_name,
+                    "quantity": quantity,
+                    "found_product": None,
+                    "relevance_score": 0,
+                    "unit_price": 0,
+                    "total_price": 0,
+                    "specifications": specs,
+                    "alternatives": []
+                })
+        
+        # === ШАГ 3: ФОРМИРОВАНИЕ ОТВЕТА ===
+        print(f"\n{'='*70}")
+        print(f"💰 ИТОГОВАЯ СТОИМОСТЬ: {total_cost:,.0f} руб.")
+        print(f"{'='*70}")
+        
+        response = {
+            "query_id": query_id,
+            "original_query": query,
+            "items": all_results,
+            "total_items": len(items_to_search),
+            "found_items": sum(1 for r in all_results if r['found_product'] is not None),
+            "total_cost": total_cost,
+            "currency": "RUB"
+        }
         
         return response
-    
-    def _search_by_components(
-        self, 
-        components: List[str], 
-        items_per_component: int = 2
-    ) -> List[Dict]:
-        """
-        Поиск по компонентам запроса
-        
-        Args:
-            components: список компонентов запроса (строки)
-            items_per_component: сколько элементов искать для каждого компонента
-            
-        Returns:
-            List[Dict]: объединенный список найденных товаров
-        """
-        all_results = []
-        seen_ids = set()
-        
-        for component in components:
-            # Ищем по компоненту
-            results = self.search_engine.search(
-                component, 
-                top_k=items_per_component
-            )
-            
-            # Добавляем результаты без дубликатов
-            for product, score in results:
-                product_id = product.get('id')
-                if product_id not in seen_ids:
-                    all_results.append(product)
-                    seen_ids.add(product_id)
         
         return all_results
