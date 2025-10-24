@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200;
+  }
+  
+  html {
+    @apply transition-colors duration-200;
+  }
+  
+  /* Принудительное применение темной темы ко всем элементам */
+  .dark {
+    color-scheme: dark;
+  }
+  
+  .dark * {
+    @apply transition-colors duration-200;
+  }
+  
+  /* Отладочные стили для проверки темы */
+  html.dark {
+    background-color: #111827 !important;
+  }
+  
+  html:not(.dark) {
+    background-color: #f9fafb !important;
+  }
+  
+  /* Принудительные стили для темной темы */
+  .dark body {
+    background-color: #111827 !important;
+    color: #ffffff !important;
+  }
+  
+  .dark .chat-container {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+  }
+  
+  .dark .messages-area {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+  }
+  
+  .dark .input-area {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+  }
+}
+
+@layer components {
+  .chat-message {
+    @apply p-4 rounded-lg max-w-xs lg:max-w-md;
+  }
+  
+  .user-message {
+    @apply bg-primary-500 text-white ml-auto;
+  }
+  
+  .bot-message {
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-white mr-auto border border-gray-200 dark:border-gray-600;
+  }
+  
+  .typing-indicator {
+    @apply flex space-x-1;
+  }
+  
+  .typing-dot {
+    @apply w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse;
+  }
+  
+  .admin-panel {
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
+  }
+  
+  .file-editor {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600;
+  }
+  
+  /* Стили для поля ввода */
+  .message-input {
+    @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400;
+  }
+  
+  /* Стили для контейнера чата */
+  .chat-container {
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden;
+  }
+  
+  /* Стили для области сообщений */
+  .messages-area {
+    @apply h-96 overflow-y-auto p-6 space-y-4 bg-white dark:bg-gray-800;
+  }
+  
+  /* Стили для области ввода */
+  .input-area {
+    @apply border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800;
+  }
+  
+  /* Стили для кнопок */
+  .control-button {
+    @apply p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors;
+  }
+  
+  /* Стили для счетчика сообщений */
+  .message-counter {
+    @apply text-xs text-gray-500 dark:text-gray-400;
+  }
+}
