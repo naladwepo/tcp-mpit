@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Поиск Комплектующих</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-bottom: 30px;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-button {
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        .search-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .options {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .option-group label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .option-group input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+        }
+
+        .option-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        .results-container.show {
+            display: block;
+        }
+
+        .results-header {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .results-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .results-stats {
+            display: flex;
+            gap: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .results-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .result-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .result-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .result-item-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .result-item-name {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .result-item-cost {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+            white-space: nowrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .health-status {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .health-status.healthy {
+            background: rgba(76, 175, 80, 0.8);
+        }
+
+        .health-status.unhealthy {
+            background: rgba(244, 67, 54, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 RAG Поиск Комплектующих</h1>
+            <p>Система поиска строительных материалов с использованием AI</p>
+            <div id="healthStatus" class="health-status">Проверка статуса...</div>
+        </div>
+
+        <div class="search-box">
+            <div class="search-input-group">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput" 
+                    placeholder="Введите запрос (например: Гайка М6, Короб 200x200, Крышка углового лотка)"
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button class="search-button" id="searchButton" onclick="performSearch()">
+                    Найти
+                </button>
+            </div>
+
+            <div class="options">
+                <div class="option-group">
+                    <label for="topK">Результатов:</label>
+                    <input type="number" id="topK" value="10" min="1" max="50">
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="useDecomposition" checked>
+                    <label for="useDecomposition">Умный поиск (декомпозиция)</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsContainer" class="results-container">
+            <div class="results-header">
+                <h2>Результаты поиска</h2>
+                <div class="results-stats">
+                    <div class="stat">
+                        Запрос: <span class="stat-value" id="searchQuery">-</span>
+                    </div>
+                    <div class="stat">
+                        Найдено: <span class="stat-value" id="itemsCount">0</span>
+                    </div>
+                    <div class="stat">
+                        Общая стоимость: <span class="stat-value" id="totalCost">0 руб.</span>
+                    </div>
+                </div>
+            </div>
+            <div id="resultsList" class="results-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        // Проверка здоровья системы
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                const statusEl = document.getElementById('healthStatus');
+                if (data.status === 'healthy') {
+                    statusEl.className = 'health-status healthy';
+                    statusEl.innerHTML = `✅ Система готова | Товаров: ${data.products_count} | LLM: ${data.llm_available ? '✓' : '✗'}`;
+                } else {
+                    statusEl.className = 'health-status unhealthy';
+                    statusEl.textContent = '❌ Система не готова';
+                }
+            } catch (error) {
+                const statusEl = document.getElementById('healthStatus');
+                statusEl.className = 'health-status unhealthy';
+                statusEl.textContent = '❌ Не удалось подключиться к API';
+            }
+        }
+
+        // Выполнение поиска
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                alert('Введите поисковый запрос');
+                return;
+            }
+
+            const topK = parseInt(document.getElementById('topK').value);
+            const useDecomposition = document.getElementById('useDecomposition').checked;
+
+            const button = document.getElementById('searchButton');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsList = document.getElementById('resultsList');
+
+            // Показываем загрузку
+            button.disabled = true;
+            button.textContent = 'Поиск...';
+            resultsContainer.classList.add('show');
+            resultsList.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Выполняется поиск...</div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: topK,
+                        use_decomposition: useDecomposition
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                resultsList.innerHTML = `
+                    <div class="error-message">
+                        <strong>Ошибка:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Найти';
+            }
+        }
+
+        // Отображение результатов
+        function displayResults(data) {
+            document.getElementById('searchQuery').textContent = data.query;
+            document.getElementById('itemsCount').textContent = data.items_count;
+            document.getElementById('totalCost').textContent = data.total_cost;
+
+            const resultsList = document.getElementById('resultsList');
+
+            if (data.found_items.length === 0) {
+                resultsList.innerHTML = '<div class="loading">Ничего не найдено</div>';
+                return;
+            }
+
+            resultsList.innerHTML = data.found_items.map((item, index) => `
+                <div class="result-item">
+                    <div class="result-item-header">
+                        <div class="result-item-number">${index + 1}</div>
+                        <div class="result-item-name">${item.name}</div>
+                        <div class="result-item-cost">${item.cost}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Обработка Enter в поле поиска
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        }
+
+        // Проверка здоровья при загрузке
+        checkHealth();
+        
+        // Периодическая проверка здоровья
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+</html>
