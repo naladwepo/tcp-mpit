@@ -411,6 +411,70 @@ async def generate_pdf_document(request: SearchRequest):
         )
 
 
+def format_search_result_as_string(result: Dict[str, Any]) -> str:
+    """
+    Форматирует результат поиска в читаемую строку
+    
+    Args:
+        result: Результат поиска от процессора
+        
+    Returns:
+        str: Отформатированная строка с результатами
+    """
+    lines = []
+    lines.append("=" * 70)
+    lines.append("РЕЗУЛЬТАТЫ ПОИСКА")
+    lines.append("=" * 70)
+    lines.append("")
+    
+    # Исходный запрос
+    lines.append(f"Запрос: {result.get('original_query', 'Не указан')}")
+    lines.append("")
+    
+    # Статистика
+    lines.append(f"Всего товаров в запросе: {result.get('total_items', 0)}")
+    lines.append(f"Найдено товаров: {result.get('found_items', 0)}")
+    lines.append(f"Общая стоимость: {result.get('total_cost', 0):,.2f} {result.get('currency', 'RUB')}")
+    lines.append("")
+    
+    # Товары
+    lines.append("НАЙДЕННЫЕ ТОВАРЫ:")
+    lines.append("")
+    
+    for idx, item in enumerate(result.get('items', []), 1):
+        product = item.get('found_product')
+        
+        lines.append(f"[{idx}] {item.get('requested_item', 'Товар')}")
+        lines.append(f"    Количество: {item.get('quantity', 1)} шт.")
+        
+        if product:
+            lines.append(f"    Найдено: {product.get('name', 'Без названия')}")
+            lines.append(f"    Категория: {product.get('category', 'Не указана')}")
+            lines.append(f"    Цена за ед.: {item.get('unit_price', 0):,.2f} ₽")
+            lines.append(f"    Итого: {item.get('total_price', 0):,.2f} ₽")
+            lines.append(f"    Релевантность: {item.get('relevance_score', 0):.4f}")
+            
+            # Спецификации
+            if item.get('specifications'):
+                lines.append(f"    Спецификация: {item.get('specifications')}")
+            
+            # Альтернативы
+            alternatives = item.get('alternatives', [])
+            if alternatives and len(alternatives) > 0:
+                lines.append(f"    Альтернатив: {len(alternatives)}")
+        else:
+            lines.append("    ❌ Товар не найден")
+        
+        lines.append("")
+    
+    # Итоги
+    lines.append("=" * 70)
+    lines.append(f"ИТОГО: {result.get('total_cost', 0):,.2f} {result.get('currency', 'RUB')}")
+    lines.append("=" * 70)
+    
+    return "\n".join(lines)
+
+
 @app.post("/generate/both")
 async def generate_both_documents(request: SearchRequest):
     """
@@ -420,7 +484,7 @@ async def generate_both_documents(request: SearchRequest):
         request: Запрос на поиск (такой же как для /search)
         
     Returns:
-        Dict: Информация о созданных документах
+        Dict: Информация о созданных документах + результат поиска в виде строки
     """
     if not products_loaded or not processor or not document_generator:
         raise HTTPException(
@@ -435,6 +499,9 @@ async def generate_both_documents(request: SearchRequest):
         # Генерируем документы
         files = document_generator.generate_both(result)
         
+        # Форматируем результат в строку
+        result_string = format_search_result_as_string(result)
+        
         return {
             "message": "Документы успешно созданы",
             "files": {
@@ -448,6 +515,14 @@ async def generate_both_documents(request: SearchRequest):
                     "path": str(files['pdf']),
                     "download_url": f"/download/{files['pdf'].name}"
                 }
+            },
+            "search_result": result_string,
+            "search_data": {
+                "original_query": result.get('original_query'),
+                "total_items": result.get('total_items', 0),
+                "found_items": result.get('found_items', 0),
+                "total_cost": result.get('total_cost', 0.0),
+                "currency": result.get('currency', 'RUB')
             }
         }
         
