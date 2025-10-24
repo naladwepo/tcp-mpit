@@ -104,7 +104,7 @@ print_status "Ожидание запуска FastAPI..."
 sleep 3
 
 # Запуск Express сервера
-print_status "Запуск Express сервера на порту 5000..."
+print_status "Запуск Express сервера на порту 5550..."
 node server.js &
 EXPRESS_PID=$!
 print_success "Express сервер запущен (PID: $EXPRESS_PID)"
@@ -134,10 +134,10 @@ else
 fi
 
 # Проверка Express
-if curl -s http://localhost:5000/api/health > /dev/null 2>&1; then
-    print_success "✅ Express сервер работает на http://localhost:5000"
+if curl -s http://localhost:5550/api/health > /dev/null 2>&1; then
+    print_success "✅ Express сервер работает на http://localhost:5550"
 else
-    print_warning "⚠️  Express сервер недоступен на http://localhost:5000"
+    print_warning "⚠️  Express сервер недоступен на http://localhost:5550"
 fi
 
 # Проверка Vite
@@ -155,7 +155,7 @@ echo "   • Веб-интерфейс: http://localhost:3001"
 echo "   • Админ-панель: http://localhost:3001/admin"
 echo "   • FastAPI API: http://localhost:8000"
 echo "   • FastAPI Docs: http://localhost:8000/docs"
-echo "   • Express API: http://localhost:5000"
+echo "   • Express API: http://localhost:5550"
 echo ""
 echo "🔧 Управление:"
 echo "   • Нажмите Ctrl+C для остановки всех сервисов"

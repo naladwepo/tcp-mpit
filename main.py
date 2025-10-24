@@ -76,9 +76,9 @@ def print_result(response: dict, show_details: bool = True):
     """
     resp = response.get('response', {})
     
-    print("\n" + "="*70)
+    print("\n" + "="*30)
     print("РЕЗУЛЬТАТЫ ПОИСКА")
-    print("="*70)
+    print("="*30)
     
     # Метаинформация
     if 'id' in response:
@@ -94,12 +94,12 @@ def print_result(response: dict, show_details: bool = True):
         items = resp.get('found_items', [])
         if items:
             print("\nСписок товаров:")
-            print("-"*70)
+            print("-"*30)
             for i, item in enumerate(items, 1):
                 print(f"\n{i}. {item.get('name', 'Неизвестно')}")
                 print(f"   Стоимость: {item.get('cost', '0 руб.')}")
     
-    print("="*70 + "\n")
+    print("="*30 + "\n")
 
 
 def interactive_mode(processor):
@@ -109,12 +109,12 @@ def interactive_mode(processor):
     Args:
         processor: экземпляр процессора (QueryProcessor или SimpleProcessor)
     """
-    print("\n" + "="*70)
+    print("\n" + "="*30)
     print("ИНТЕРАКТИВНЫЙ РЕЖИМ")
-    print("="*70)
+    print("="*30)
     print("Введите запрос для поиска товаров или 'exit' для выхода")
     print("Пример: Гайка М6")
-    print("="*70 + "\n")
+    print("="*30 + "\n")
     
     while True:
         try:
@@ -243,9 +243,9 @@ def main():
     args = parser.parse_args()
     
     # Выбираем режим поиска
-    print("="*70)
+    print("="*30)
     print("Инициализация RAG-системы поиска комплектующих")
-    print("="*70)
+    print("="*30)
     
     if args.simple:
         print("\n📝 Используется простой текстовый поиск\n")

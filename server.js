@@ -7,7 +7,7 @@ const pdfParse = require('pdf-parse')
 const mammoth = require('mammoth')
 
 const app = express()
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5550
 
 // Middleware
 app.use(cors())
